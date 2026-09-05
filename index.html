@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12181C">
+<title>물량정리</title>
+<style>
+:root{
+  --ink:#12181C;
+  --ink-2:#4A555C;
+  --ink-3:#7C878E;
+  --paper:#FFFFFF;
+  --field:#E7EBEA;
+  --rule:#CDD4D6;
+  --rule-soft:#E4E9EA;
+  --act:#0B4FD6;
+  --act-soft:#E6EDFD;
+  --warn:#9A4A05;
+  --warn-soft:#FBEEE0;
+  --ok:#1B6B45;
+  --r:10px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--field);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ---- shell ---- */
+header{
+  position:sticky;top:0;z-index:40;
+  background:var(--ink);color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 0;
+}
+.brand{display:flex;align-items:baseline;gap:9px;padding-bottom:9px}
+.brand h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em}
+.brand span{font-size:12px;color:#9FB0B8}
+nav{display:flex;gap:2px}
+nav button{
+  flex:1;appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  color:#9FB0B8;font:inherit;font-size:13.5px;font-weight:550;
+  padding:9px 2px 8px;cursor:pointer;
+}
+nav button[aria-selected="true"]{color:#fff;border-bottom-color:#fff}
+nav button:focus-visible{outline:2px solid #7FB0FF;outline-offset:-3px;border-radius:4px}
+main{padding:14px 12px 40px;max-width:720px;margin:0 auto}
+.panel[hidden]{display:none}
+
+/* ---- blocks ---- */
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:13px;margin-bottom:11px}
+.step{display:flex;align-items:center;gap:8px;margin:0 0 9px}
+.step b{
+  width:20px;height:20px;flex:none;border-radius:50%;background:var(--ink);color:#fff;
+  font-size:11.5px;font-weight:700;display:grid;place-items:center;
+}
+.step h2{margin:0;font-size:14.5px;font-weight:650;letter-spacing:-.01em}
+.hint{margin:0 0 9px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+label.f{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:0 0 4px}
+input[type=text],input[type=password],input[type=date],input[type=number],textarea,select{
+  width:100%;font:inherit;color:var(--ink);background:var(--paper);
+  border:1px solid var(--rule);border-radius:8px;padding:9px 10px;
+}
+textarea{min-height:110px;resize:vertical;font-size:14px;line-height:1.5}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--act);outline-offset:-1px;border-color:var(--act)}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{min-width:0}
+
+.b{
+  appearance:none;font:inherit;font-weight:600;cursor:pointer;
+  border-radius:8px;padding:11px 14px;border:1px solid var(--rule);
+  background:var(--paper);color:var(--ink);
+  display:inline-block;text-align:center;
+}
+.b:focus-visible{outline:2px solid var(--act);outline-offset:2px}
+.b.pri{background:var(--act);border-color:var(--act);color:#fff}
+.b.wide{width:100%}
+.b:disabled{opacity:.45;cursor:default}
+.b.sm{padding:7px 10px;font-size:13px;font-weight:550}
+.sr-file{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;margin:-1px;padding:0;border:0}
+.sr-file:focus-visible + .drop{outline:2px solid var(--act);outline-offset:2px}
+.stack{display:flex;flex-direction:column;gap:8px}
+
+.files{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.thumb{position:relative;width:64px;height:64px;border-radius:7px;overflow:hidden;border:1px solid var(--rule)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{
+  position:absolute;top:2px;right:2px;width:19px;height:19px;border:0;border-radius:50%;
+  background:rgba(18,24,28,.82);color:#fff;font-size:12px;line-height:1;cursor:pointer;padding:0;
+}
+.drop{
+  border:1.5px dashed var(--rule);border-radius:9px;padding:16px 12px;text-align:center;
+  color:var(--ink-2);font-size:13px;background:#FCFDFD;
+}
+.drop.over{border-color:var(--act);background:var(--act-soft);color:var(--act)}
+
+.note{border-radius:8px;padding:10px 11px;font-size:13px;line-height:1.55;margin:0 0 10px}
+.note.warn{background:var(--warn-soft);color:var(--warn)}
+.note.err{background:#FBE9E7;color:#8E2A18}
+.note.ok{background:#E6F2EC;color:var(--ok)}
+.note b{font-weight:650}
+
+/* ---- grid table ---- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -13px;padding:0 13px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--rule-soft);padding:0;text-align:right;white-space:nowrap}
+thead th{
+  font-size:12px;font-weight:600;color:var(--ink-2);padding:0 6px 6px;
+  border-bottom:1.5px solid var(--rule);position:sticky;top:0;background:var(--paper);
+}
+th.nm,td.nm{text-align:left;position:sticky;left:0;background:var(--paper);z-index:2;padding-right:8px}
+tbody td.nm{font-weight:600;font-size:13.5px}
+tbody tr:hover td{background:#F7FAFA}
+tbody tr:hover td.nm{background:#F7FAFA}
+td input.q{
+  width:52px;border:0;border-radius:0;background:transparent;text-align:right;
+  padding:9px 6px;font:inherit;font-size:14px;font-variant-numeric:tabular-nums;
+}
+td input.q:focus{outline:2px solid var(--act);outline-offset:-2px;border-radius:5px;background:var(--act-soft)}
+td input.q.zero{color:#B6C0C4}
+td.tot{font-weight:700;padding:9px 6px;font-variant-numeric:tabular-nums}
+tfoot td{border-top:1.5px solid var(--rule);border-bottom:0;font-weight:700;padding:9px 6px;font-variant-numeric:tabular-nums}
+tfoot td.nm{font-weight:700}
+.del{border:0;background:none;color:var(--ink-3);font-size:15px;cursor:pointer;padding:9px 4px;line-height:1}
+.del:hover{color:#8E2A18}
+tr.flag td.nm{box-shadow:inset 3px 0 0 var(--warn)}
+
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:99px;margin-left:5px;vertical-align:1px}
+.tag.w{background:var(--warn-soft);color:var(--warn)}
+
+details.raw{margin-top:11px;border-top:1px solid var(--rule-soft);padding-top:9px}
+details.raw summary{font-size:12.5px;color:var(--ink-2);cursor:pointer;font-weight:600}
+.rawline{font-size:12.5px;color:var(--ink-2);padding:5px 0;border-bottom:1px dotted var(--rule-soft);line-height:1.5}
+.rawline b{color:var(--ink);font-weight:650}
+
+.maprow{display:flex;gap:7px;align-items:center;padding:7px 0;border-bottom:1px solid var(--rule-soft)}
+.maprow .k{flex:1;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.maprow .arrow{color:var(--ink-3);font-size:12px}
+.maprow input{flex:1;padding:7px 9px;font-size:13.5px}
+
+.out{width:100%;min-height:96px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre;overflow-x:auto}
+.muted{font-size:12px;color:var(--ink-3);margin:6px 0 0;line-height:1.5}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:var(--field);border:1px solid var(--rule);border-radius:99px;padding:4px 6px 4px 11px;font-size:13px;display:flex;align-items:center;gap:4px}
+.chip button{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:14px;line-height:1;padding:0 3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><h1>물량정리</h1><span id="hdrDate"></span></div>
+  <nav role="tablist">
+    <button role="tab" id="t-in"  aria-selected="true"  onclick="go('in')">입력</button>
+    <button role="tab" id="t-ck"  aria-selected="false" onclick="go('ck')">확인</button>
+    <button role="tab" id="t-nm"  aria-selected="false" onclick="go('nm')">이름</button>
+    <button role="tab" id="t-st"  aria-selected="false" onclick="go('st')">설정</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ 입력 ============ -->
+<section class="panel" id="p-in">
+  <div class="card">
+    <div class="step"><b>1</b><h2>단톡방 내용 넣기</h2></div>
+    <p class="hint">캡쳐는 여러 장 한 번에 넣어도 됩니다. 겹치는 메시지는 알아서 한 번만 셉니다. 텍스트로 복사한 게 있으면 같이 넣으면 더 정확합니다.</p>
+
+    <label class="f" for="dateIn">날짜</label>
+    <input type="date" id="dateIn">
+
+    <div style="height:11px"></div>
+    <input type="file" id="pick" accept="image/*" multiple class="sr-file">
+    <label class="drop" id="drop" for="pick">
+      캡쳐 이미지를 여기에 끌어놓거나 붙여넣기<br>
+      <span class="b sm" style="margin-top:9px">이미지 고르기</span>
+    </label>
+    <div class="files" id="files"></div>
+
+    <div style="height:12px"></div>
+    <label class="f" for="textIn">복사한 텍스트 (선택)</label>
+    <textarea id="textIn" placeholder="카톡에서 복사한 대화 내용을 붙여넣으세요"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="step"><b>2</b><h2>물량 읽기</h2></div>
+    <div id="inMsg"></div>
+    <button class="b pri wide" id="runBtn" onclick="run()">물량 읽기</button>
+    <p class="muted" id="runNote">읽은 결과는 다음 화면에서 직접 고칠 수 있습니다.</p>
+  </div>
+</section>
+
+<!-- ============ 확인 ============ -->
+<section class="panel" id="p-ck" hidden>
+  <div id="ckEmpty" class="card">
+    <p class="hint" style="margin:0">아직 읽은 물량이 없습니다. 입력 화면에서 캡쳐나 텍스트를 넣고 물량 읽기를 눌러주세요.</p>
+  </div>
+
+  <div id="ckBody" hidden>
+    <div id="ckMsg"></div>
+
+    <div class="card">
+      <div class="step"><b>3</b><h2>숫자 확인하기</h2></div>
+      <p class="hint">잘못 읽은 칸은 바로 눌러서 고치면 됩니다. 빈칸은 0으로 나갑니다.</p>
+      <div class="scroll">
+        <table id="grid">
+          <thead><tr id="gridHead"></tr></thead>
+          <tbody id="gridBody"></tbody>
+          <tfoot id="gridFoot"></tfoot>
+        </table>
+      </div>
+      <div class="row" style="margin-top:11px;gap:7px">
+        <input type="text" id="addName" placeholder="이름 추가" style="flex:1">
+        <button class="b sm" onclick="addPerson()">추가</button>
+      </div>
+      <details class="raw" id="rawWrap">
+        <summary>읽어온 원문 보기</summary>
+        <div id="rawList"></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <div class="step"><b>4</b><h2>엑셀로 옮기기</h2></div>
+      <p class="hint">복사한 뒤 엑셀에서 붙여넣기 하면 칸이 알아서 나뉩니다.</p>
+      <div class="stack">
+        <button class="b pri wide" onclick="copyTSV(true)">머리글까지 복사</button>
+        <button class="b wide" onclick="copyTSV(false)">숫자만 복사 (이어붙일 때)</button>
+        <button class="b wide" onclick="dlCSV()">CSV 파일로 내려받기</button>
+      </div>
+      <div id="copyMsg" style="margin-top:10px"></div>
+      <details class="raw"><summary>붙여넣을 내용 미리보기</summary>
+        <textarea class="out" id="preview" readonly></textarea>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 이름 ============ -->
+<section class="panel" id="p-nm" hidden>
+  <div class="card">
+    <div class="step"><b>·</b><h2>닉네임과 실명 연결</h2></div>
+    <p class="hint">단톡방 닉네임을 한 번 연결해두면 다음부터는 자동으로 실명으로 바뀝니다.</p>
+    <div class="row" style="gap:7px;margin-bottom:11px">
+      <input type="text" id="aliasK" placeholder="단톡 닉네임" style="flex:1">
+      <span class="arrow" style="color:var(--ink-3)">→</span>
+      <input type="text" id="aliasV" placeholder="실명" style="flex:1">
+      <button class="b sm" onclick="addAlias()">연결</button>
+    </div>
+    <div id="aliasList"></div>
+  </div>
+</section>
+
+<!-- ============ 설정 ============ -->
+<section class="panel" id="p-st" hidden>
+  <div class="card">
+    <div class="step"><b>·</b><h2>제미나이 API 키</h2></div>
+    <p class="hint">Google AI Studio에서 키를 만들어 넣으세요. 키는 이 기기에만 저장되고 어디로도 전송되지 않습니다.</p>
+    <label class="f" for="keyIn">API 키</label>
+    <div class="row" style="gap:7px">
+      <input type="password" id="keyIn" placeholder="AIza..." style="flex:1" autocomplete="off">
+      <button class="b sm" onclick="toggleKey()" id="keyEye">보기</button>
+    </div>
+    <div style="height:11px"></div>
+    <label class="f" for="modelIn">모델</label>
+    <div class="row" style="gap:7px">
+      <input type="text" id="modelIn" list="models" placeholder="gemini-flash-latest" style="flex:1">
+      <button class="b sm" onclick="loadModels()" id="mdlBtn">목록</button>
+    </div>
+    <datalist id="models">
+      <option value="gemini-flash-latest">
+      <option value="gemini-3.8-flash">
+      <option value="gemini-3.5-flash">
+      <option value="gemini-flash-lite-latest">
+    </datalist>
+    <p class="muted">붐빔 오류가 계속 나면 <b>목록</b>을 눌러 실제 쓸 수 있는 모델을 불러온 뒤, preview가 아닌 이름으로 바꿔보세요.</p>
+    <div style="height:11px"></div>
+    <button class="b wide" onclick="saveSettings()">저장</button>
+    <div id="stMsg" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><b>·</b><h2>물품 종류</h2></div>
+    <p class="hint">엑셀 표의 열이 됩니다. 순서대로 나갑니다.</p>
+    <div class="row" style="gap:7px">
+      <input type="text" id="itemIn" placeholder="물품 이름" style="flex:1">
+      <button class="b sm" onclick="addItem()">추가</button>
+    </div>
+    <div class="chips" id="itemChips"></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><b>·</b><h2>저장된 내용 지우기</h2></div>
+    <p class="hint">닉네임 연결과 물품 목록, API 키가 모두 지워집니다.</p>
+    <button class="b wide" onclick="wipe()">전부 지우기</button>
+  </div>
+</section>
+
+</main>
+
+<script>
+'use strict';
+
+/* ---------------- 저장소 ---------------- */
+const K = {key:'mv_key', model:'mv_model', items:'mv_items', alias:'mv_alias', last:'mv_last'};
+const DEFAULT_ITEMS = ['오네','책','딜리','주말딜리','새벽딜리'];
+const ETC = '기타';
+
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+
+let S = {
+  apiKey: load(K.key, ''),
+  model:  load(K.model, 'gemini-flash-latest'),
+  items:  load(K.items, DEFAULT_ITEMS.slice()),
+  alias:  load(K.alias, {}),
+  images: [],          // {name, mime, b64, url}
+  rawRows: [],         // {name, item, qty, raw, sure}
+  people: [],          // 순서 유지
+  grid: {},            // name -> {item: qty}
+  flags: {}            // name -> true (확인 필요)
+};
+if (!Array.isArray(S.items) || !S.items.length) S.items = DEFAULT_ITEMS.slice();
+
+/* ---------------- 화면 전환 ---------------- */
+function go(id){
+  ['in','ck','nm','st'].forEach(x => {
+    document.getElementById('p-'+x).hidden = (x !== id);
+    document.getElementById('t-'+x).setAttribute('aria-selected', x === id ? 'true' : 'false');
+  });
+  if (id === 'nm') drawAlias();
+  if (id === 'st') drawItems();
+  window.scrollTo(0,0);
+}
+function msg(el, kind, html){
+  const n = document.getElementById(el);
+  n.innerHTML = html ? '<div class="note '+kind+'">'+html+'</div>' : '';
+}
+
+/* ---------------- 이미지 ---------------- */
+const MAX_EDGE = 2000;
+
+function addImages(fileList){
+  const files = Array.from(fileList).filter(f => f && f.type && f.type.indexOf('image/') === 0);
+  if (!files.length) return;
+  let pending = files.length;
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let {width:w, height:h} = img;
+        const scale = Math.min(1, MAX_EDGE / Math.max(w, h));
+        const cw = Math.round(w * scale), ch = Math.round(h * scale);
+        const c = document.createElement('canvas');
+        c.width = cw; c.height = ch;
+        c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        const url = c.toDataURL('image/jpeg', 0.92);
+        S.images.push({ name: f.name || '캡쳐', mime: 'image/jpeg', b64: url.split(',')[1], url });
+        if (--pending === 0) drawFiles();
+        else drawFiles();
+      };
+      img.onerror = () => { if (--pending === 0) drawFiles(); };
+      img.src = r.result;
+    };
+    r.onerror = () => { pending--; };
+    r.readAsDataURL(f);
+  });
+}
+function drawFiles(){
+  const box = document.getElementById('files');
+  box.innerHTML = '';
+  S.images.forEach((im, i) => {
+    const d = document.createElement('div');
+    d.className = 'thumb';
+    d.innerHTML = '<img alt="캡쳐 '+(i+1)+'"><button aria-label="빼기">×</button>';
+    d.querySelector('img').src = im.url;
+    d.querySelector('button').onclick = () => { S.images.splice(i,1); drawFiles(); };
+    box.appendChild(d);
+  });
+}
+document.getElementById('pick').addEventListener('change', e => { addImages(e.target.files); e.target.value=''; });
+
+const drop = document.getElementById('drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files) addImages(e.dataTransfer.files); });
+
+document.addEventListener('paste', e => {
+  if (!e.clipboardData) return;
+  const items = Array.from(e.clipboardData.items || []);
+  const imgs = items.filter(i => i.type && i.type.indexOf('image/') === 0).map(i => i.getAsFile()).filter(Boolean);
+  if (imgs.length){ e.preventDefault(); addImages(imgs); }
+});
+
+/* ---------------- 제미나이 호출 ---------------- */
+function prompt_(){
+  const list = S.items.join(', ');
+  return [
+    '카카오톡 배송 단톡방에서 기사들이 올린 물량 보고를 읽고 (이름, 물품, 수량)을 뽑아내는 작업입니다.',
+    '',
+    '물품은 반드시 다음 중 하나로 분류하세요: ' + list,
+    '- 어디에도 맞지 않으면 item을 "' + ETC + '"로 두세요.',
+    '',
+    '규칙:',
+    '- name은 메시지를 보낸 사람 이름을 화면에 보이는 그대로 적으세요. 실명으로 바꾸려 하지 마세요.',
+    '- 같은 사람이 같은 물품을 여러 번 보고했으면 합치지 말고 각각 따로 넣으세요.',
+    '- 수량이 없는 인사, 잡담, 공지는 넣지 마세요.',
+    '- 캡쳐 여러 장이 겹칠 수 있습니다. 글자까지 완전히 같은 메시지가 두 번 나오면 한 번만 세세요.',
+    '- raw에는 그 숫자가 나온 메시지 원문을 짧게 그대로 옮기세요.',
+    '- 글자가 잘렸거나 숫자가 흐려서 확신이 없으면 sure를 false로 두세요.',
+    '- 보이지 않는 것은 추측하지 말고 빼세요.'
+  ].join('\n');
+}
+
+const SCHEMA = {
+  type:'OBJECT',
+  properties:{
+    rows:{
+      type:'ARRAY',
+      items:{
+        type:'OBJECT',
+        properties:{
+          name:{type:'STRING'},
+          item:{type:'STRING'},
+          qty:{type:'NUMBER'},
+          raw:{type:'STRING'},
+          sure:{type:'BOOLEAN'}
+        },
+        required:['name','item','qty','raw','sure'],
+        propertyOrdering:['name','item','qty','raw','sure']
+      }
+    }
+  },
+  required:['rows']
+};
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const isBusy = (status, m) => status === 503 || status === 500 || /high demand|overload/i.test(m || '');
+
+async function callGemini(){
+  const parts = [];
+  const txt = document.getElementById('textIn').value.trim();
+  S.images.forEach(im => parts.push({ inline_data: { mime_type: im.mime, data: im.b64 } }));
+  if (txt) parts.push({ text: '아래는 같은 날 단톡방에서 복사한 텍스트입니다.\n\n' + txt });
+  if (!parts.length) throw new Error('EMPTY');
+  parts.push({ text: '위 내용에서 기사별 물량을 뽑아주세요.' });
+
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+            + encodeURIComponent(S.model.trim()) + ':generateContent';
+  const body = JSON.stringify({
+    systemInstruction:{ parts:[{ text: prompt_() }] },
+    contents:[{ role:'user', parts }],
+    generationConfig:{ temperature:0, responseMimeType:'application/json', responseSchema: SCHEMA }
+  });
+
+  const btn = document.getElementById('runBtn');
+  let last;
+  for (let i = 0; i < 4; i++){
+    if (i){
+      btn.innerHTML = '<span class="spin"></span>붐벼서 다시 시도 중… (' + i + '/3)';
+      await sleep(2000 * i + 1000);
+    }
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'x-goog-api-key': S.apiKey.trim() },
+      body
+    });
+    const data = await res.json().catch(() => null);
+
+    if (res.ok){
+      const cand = data && data.candidates && data.candidates[0];
+      const text = cand && cand.content && (cand.content.parts || []).map(p => p.text || '').join('').trim();
+      if (!text) throw new Error('빈 응답이 왔습니다. 캡쳐 장수를 줄이고 다시 시도해 보세요.');
+      return JSON.parse(text.replace(/^```(?:json)?|```$/g, '').trim());
+    }
+
+    const m = (data && data.error && data.error.message) || ('HTTP ' + res.status);
+    const e = new Error(m); e.status = res.status;
+    if (!isBusy(res.status, m)) throw e;
+    last = e;
+  }
+  throw last;
+}
+
+async function run(){
+  const btn = document.getElementById('runBtn');
+  msg('inMsg','', '');
+  if (!S.apiKey.trim()){
+    msg('inMsg','warn','API 키가 없습니다. <b>설정</b> 화면에서 제미나이 키를 넣어주세요.');
+    return;
+  }
+  if (!S.images.length && !document.getElementById('textIn').value.trim()){
+    msg('inMsg','warn','캡쳐 이미지나 텍스트 중 하나는 넣어야 합니다.');
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>읽는 중…';
+  try{
+    const out = await callGemini();
+    build(Array.isArray(out.rows) ? out.rows : []);
+    go('ck');
+  }catch(err){
+    let m = err && err.message || String(err);
+    if (err && err.status === 404) m = '모델 <b>' + esc(S.model) + '</b> 을(를) 찾을 수 없습니다. 설정에서 <b>목록</b>을 눌러 쓸 수 있는 모델을 확인하세요.';
+    else if (err && err.status === 400 && /API key/i.test(m)) m = 'API 키가 올바르지 않습니다. 설정에서 다시 확인해 주세요.';
+    else if (err && err.status === 429) m = '사용량 한도를 넘었습니다. 잠시 뒤에 다시 시도하세요.';
+    else if (isBusy(err && err.status, m)) m = '구글 쪽 모델이 붐벼서 세 번 다시 시도했지만 실패했습니다. 앱 문제가 아닙니다. 잠시 뒤에 다시 누르거나, 설정에서 다른 모델(preview가 아닌 것)로 바꿔보세요.';
+    else if (m === 'Failed to fetch') m = '네트워크에 연결하지 못했습니다.';
+    msg('inMsg','err', m);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '물량 읽기';
+  }
+}
+
+/* ---------------- 표 만들기 ---------------- */
+function build(rows){
+  S.rawRows = rows.map(r => ({
+    name: String(r.name || '').trim(),
+    item: String(r.item || '').trim(),
+    qty:  Number(r.qty) || 0,
+    raw:  String(r.raw || '').trim(),
+    sure: r.sure !== false
+  })).filter(r => r.name);
+
+  S.people = []; S.grid = {}; S.flags = {};
+
+  S.rawRows.forEach(r => {
+    const nick = r.name;
+    const real = S.alias[nick] || nick;
+    if (!S.grid[real]){ S.grid[real] = {}; S.people.push(real); }
+    const col = S.items.indexOf(r.item) >= 0 ? r.item : ETC;
+    S.grid[real][col] = (S.grid[real][col] || 0) + r.qty;
+    if (col === ETC || !r.sure || !S.alias[nick] && nick === real) {
+      // 기타 / 불확실 / 미연결 닉네임은 확인 대상
+      if (col === ETC || !r.sure) S.flags[real] = true;
+    }
+  });
+
+  document.getElementById('ckEmpty').hidden = S.people.length > 0;
+  document.getElementById('ckBody').hidden  = S.people.length === 0;
+  drawGrid();
+  drawRaw();
+  saveLast();
+  notices();
+}
+
+function notices(){
+  const unsure = S.rawRows.filter(r => !r.sure).length;
+  const etc    = S.rawRows.filter(r => S.items.indexOf(r.item) < 0).length;
+  const unmapped = [...new Set(S.rawRows.map(r => r.name).filter(n => !S.alias[n]))];
+  const bits = [];
+  if (unsure) bits.push('<b>' + unsure + '건</b>은 글자가 흐리거나 잘려서 확실하지 않습니다');
+  if (etc)    bits.push('<b>' + etc + '건</b>은 물품 종류를 못 정했습니다 (기타 열)');
+  if (bits.length) msg('ckMsg','warn', bits.join('. ') + '. 아래 표에서 확인해 주세요.');
+  else if (unmapped.length) msg('ckMsg','warn','아직 실명과 연결 안 된 이름: <b>' + unmapped.map(esc).join(', ') + '</b>. <b>이름</b> 화면에서 연결해두면 다음부터 자동으로 바뀝니다.');
+  else msg('ckMsg','ok','읽어온 ' + S.rawRows.length + '건 모두 문제없이 분류됐습니다.');
+}
+
+function cols(){
+  const c = S.items.slice();
+  const hasEtc = S.people.some(p => (S.grid[p] || {})[ETC]);
+  if (hasEtc) c.push(ETC);
+  return c;
+}
+
+function drawGrid(){
+  const c = cols();
+  const head = document.getElementById('gridHead');
+  head.innerHTML = '<th class="nm">이름</th>' + c.map(x => '<th>'+esc(x)+'</th>').join('') + '<th>합계</th><th></th>';
+
+  const body = document.getElementById('gridBody');
+  body.innerHTML = '';
+  S.people.forEach(p => {
+    const tr = document.createElement('tr');
+    if (S.flags[p]) tr.className = 'flag';
+    const td = document.createElement('td');
+    td.className = 'nm';
+    td.innerHTML = esc(p) + (S.flags[p] ? '<span class="tag w">확인</span>' : '');
+    tr.appendChild(td);
+
+    c.forEach(it => {
+      const cell = document.createElement('td');
+      const inp = document.createElement('input');
+      inp.className = 'q num';
+      inp.type = 'text';
+      inp.inputMode = 'numeric';
+      inp.setAttribute('aria-label', p + ' ' + it);
+      const v = (S.grid[p] || {})[it] || 0;
+      inp.value = v ? v : '';
+      if (!v) inp.classList.add('zero');
+      inp.oninput = () => {
+        const n = parseInt(inp.value.replace(/[^0-9-]/g,''), 10);
+        S.grid[p][it] = isNaN(n) ? 0 : n;
+        inp.classList.toggle('zero', !S.grid[p][it]);
+        totals(); saveLast(); preview();
+      };
+      cell.appendChild(inp);
+      tr.appendChild(cell);
+    });
+
+    const tot = document.createElement('td');
+    tot.className = 'tot'; tot.dataset.tot = p;
+    tr.appendChild(tot);
+
+    const dc = document.createElement('td');
+    const db = document.createElement('button');
+    db.className = 'del'; db.textContent = '×';
+    db.setAttribute('aria-label', p + ' 줄 지우기');
+    db.onclick = () => {
+      S.people = S.people.filter(x => x !== p);
+      delete S.grid[p]; delete S.flags[p];
+      drawGrid(); saveLast();
+    };
+    dc.appendChild(db); tr.appendChild(dc);
+    body.appendChild(tr);
+  });
+
+  const foot = document.getElementById('gridFoot');
+  foot.innerHTML = '<tr><td class="nm">합계</td>'
+    + c.map(x => '<td data-col="'+esc(x)+'"></td>').join('')
+    + '<td data-col="__all"></td><td></td></tr>';
+  totals(); preview();
+}
+
+function totals(){
+  const c = cols();
+  let all = 0;
+  S.people.forEach(p => {
+    let s = 0;
+    c.forEach(it => s += (S.grid[p] || {})[it] || 0);
+    all += s;
+    const cell = document.querySelector('[data-tot="'+cssEsc(p)+'"]');
+    if (cell) cell.textContent = s ? s : '';
+  });
+  c.forEach(it => {
+    let s = 0;
+    S.people.forEach(p => s += (S.grid[p] || {})[it] || 0);
+    const cell = document.querySelector('[data-col="'+cssEsc(it)+'"]');
+    if (cell) cell.textContent = s ? s : '';
+  });
+  const a = document.querySelector('[data-col="__all"]');
+  if (a) a.textContent = all ? all : '';
+}
+
+function addPerson(){
+  const el = document.getElementById('addName');
+  const n = el.value.trim();
+  if (!n) return;
+  if (!S.grid[n]){ S.grid[n] = {}; S.people.push(n); }
+  el.value = '';
+  document.getElementById('ckEmpty').hidden = true;
+  document.getElementById('ckBody').hidden = false;
+  drawGrid(); saveLast();
+}
+
+function drawRaw(){
+  const box = document.getElementById('rawList');
+  box.innerHTML = S.rawRows.length
+    ? S.rawRows.map(r =>
+        '<div class="rawline"><b>' + esc(S.alias[r.name] || r.name) + '</b> · '
+        + esc(r.item) + ' ' + r.qty + (r.sure ? '' : ' <span class="tag w">불확실</span>')
+        + '<br>' + esc(r.raw) + '</div>').join('')
+    : '<p class="muted">원문이 없습니다.</p>';
+}
+
+/* ---------------- 내보내기 ---------------- */
+function matrix(header){
+  const c = cols();
+  const d = document.getElementById('dateIn').value || '';
+  const out = [];
+  if (header) out.push(['날짜','이름'].concat(c).concat(['합계']));
+  S.people.forEach(p => {
+    const vals = c.map(it => (S.grid[p] || {})[it] || 0);
+    out.push([d, p].concat(vals).concat([vals.reduce((a,b)=>a+b,0)]));
+  });
+  return out;
+}
+const toTSV = m => m.map(r => r.join('\t')).join('\n');
+
+function preview(){
+  const el = document.getElementById('preview');
+  if (el) el.value = toTSV(matrix(true));
+}
+
+async function copyTSV(header){
+  const t = toTSV(matrix(header));
+  try{
+    await navigator.clipboard.writeText(t);
+    msg('copyMsg','ok','복사했습니다. 엑셀에서 붙여넣기 하세요.');
+  }catch(e){
+    const ta = document.getElementById('preview');
+    ta.value = t; ta.focus(); ta.select();
+    try{ document.execCommand('copy'); msg('copyMsg','ok','복사했습니다. 엑셀에서 붙여넣기 하세요.'); }
+    catch(e2){ msg('copyMsg','warn','자동 복사가 막혔습니다. 미리보기 칸의 내용을 직접 길게 눌러 복사하세요.'); }
+  }
+  setTimeout(() => msg('copyMsg','',''), 4000);
+}
+
+function dlCSV(){
+  const m = matrix(true);
+  const csv = m.map(r => r.map(v => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '물량_' + (document.getElementById('dateIn').value || 'today') + '.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+
+/* ---------------- 닉네임 매핑 ---------------- */
+function addAlias(){
+  const k = document.getElementById('aliasK').value.trim();
+  const v = document.getElementById('aliasV').value.trim();
+  if (!k || !v) return;
+  S.alias[k] = v; save(K.alias, S.alias);
+  document.getElementById('aliasK').value = '';
+  document.getElementById('aliasV').value = '';
+  drawAlias();
+  if (S.rawRows.length) build(S.rawRows);
+}
+function drawAlias(){
+  const box = document.getElementById('aliasList');
+  const keys = Object.keys(S.alias).sort();
+  const seen = [...new Set(S.rawRows.map(r => r.name))].filter(n => !S.alias[n]);
+
+  let html = '';
+  if (seen.length){
+    html += '<p class="hint" style="margin:0 0 6px"><b>이번에 읽은 이름 중 아직 연결 안 된 것</b></p>';
+    seen.forEach(n => {
+      html += '<div class="maprow"><span class="k">' + esc(n) + '</span><span class="arrow">→</span>'
+           +  '<input type="text" placeholder="실명" data-nick="' + esc(n) + '">'
+           +  '<button class="b sm" data-add="' + esc(n) + '">연결</button></div>';
+    });
+    html += '<div style="height:14px"></div>';
+  }
+  html += '<p class="hint" style="margin:0 0 6px"><b>연결해 둔 이름</b></p>';
+  html += keys.length
+    ? keys.map(k => '<div class="maprow"><span class="k">' + esc(k) + '</span><span class="arrow">→</span>'
+        + '<span class="k">' + esc(S.alias[k]) + '</span>'
+        + '<button class="del" data-del="' + esc(k) + '" aria-label="지우기">×</button></div>').join('')
+    : '<p class="muted">아직 없습니다.</p>';
+
+  box.innerHTML = html;
+  box.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    const nick = b.getAttribute('data-add');
+    const inp = box.querySelector('[data-nick="' + cssEsc(nick) + '"]');
+    const v = inp && inp.value.trim();
+    if (!v) return;
+    S.alias[nick] = v; save(K.alias, S.alias);
+    drawAlias(); build(S.rawRows);
+  });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    delete S.alias[b.getAttribute('data-del')];
+    save(K.alias, S.alias); drawAlias();
+    if (S.rawRows.length) build(S.rawRows);
+  });
+}
+
+/* ---------------- 설정 ---------------- */
+async function loadModels(){
+  const btn = document.getElementById('mdlBtn');
+  const key = document.getElementById('keyIn').value.trim() || S.apiKey.trim();
+  if (!key){ msg('stMsg','warn','먼저 API 키를 넣어주세요.'); return; }
+  btn.disabled = true; btn.textContent = '…';
+  try{
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+      headers:{ 'x-goog-api-key': key }
+    });
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error((d && d.error && d.error.message) || ('HTTP ' + r.status));
+
+    const names = (d.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0)
+      .map(m => String(m.name || '').replace(/^models\//, ''))
+      .filter(n => /flash|pro/i.test(n))
+      .filter(n => !/tts|embedding|image|audio|live|robotics|veo|imagen|thinking|learnlm|gemma/i.test(n))
+      .sort();
+
+    if (!names.length) throw new Error('쓸 수 있는 모델이 없습니다.');
+    document.getElementById('models').innerHTML =
+      names.map(n => '<option value="' + esc(n) + '">').join('');
+    const stable = names.filter(n => !/preview|exp/i.test(n));
+    msg('stMsg','ok','모델 ' + names.length + '개를 불러왔습니다. 모델 칸을 누르면 목록이 나옵니다.'
+      + (stable.length ? ' 붐빔이 잦으면 <b>' + esc(stable[0]) + '</b> 처럼 preview가 없는 이름을 권합니다.' : ''));
+  }catch(e){
+    msg('stMsg','err', esc(e.message || String(e)));
+  }finally{
+    btn.disabled = false; btn.textContent = '목록';
+  }
+}
+
+function saveSettings(){
+  S.apiKey = document.getElementById('keyIn').value.trim();
+  S.model  = document.getElementById('modelIn').value.trim() || 'gemini-flash-latest';
+  save(K.key, S.apiKey); save(K.model, S.model);
+  document.getElementById('modelIn').value = S.model;
+  msg('stMsg','ok','저장했습니다.');
+  setTimeout(() => msg('stMsg','',''), 2500);
+}
+function toggleKey(){
+  const i = document.getElementById('keyIn'), b = document.getElementById('keyEye');
+  const show = i.type === 'password';
+  i.type = show ? 'text' : 'password';
+  b.textContent = show ? '숨기기' : '보기';
+}
+function addItem(){
+  const el = document.getElementById('itemIn');
+  const v = el.value.trim();
+  if (!v || S.items.indexOf(v) >= 0) { el.value=''; return; }
+  S.items.push(v); save(K.items, S.items); el.value = '';
+  drawItems();
+  if (S.rawRows.length) build(S.rawRows);
+}
+function drawItems(){
+  const box = document.getElementById('itemChips');
+  box.innerHTML = S.items.map((it,i) =>
+    '<span class="chip">' + esc(it) + '<button data-i="'+i+'" aria-label="'+esc(it)+' 빼기">×</button></span>').join('');
+  box.querySelectorAll('button').forEach(b => b.onclick = () => {
+    S.items.splice(+b.getAttribute('data-i'), 1);
+    if (!S.items.length) S.items = DEFAULT_ITEMS.slice();
+    save(K.items, S.items); drawItems();
+    if (S.rawRows.length) build(S.rawRows);
+  });
+}
+function wipe(){
+  if (!confirm('저장된 API 키, 닉네임 연결, 물품 목록을 모두 지웁니다. 계속할까요?')) return;
+  Object.values(K).forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
+
+/* ---------------- 임시 저장 ---------------- */
+function saveLast(){
+  save(K.last, { date: document.getElementById('dateIn').value, people: S.people, grid: S.grid, rawRows: S.rawRows, flags: S.flags });
+}
+function restore(){
+  const l = load(K.last, null);
+  if (!l || !l.people || !l.people.length) return;
+  const today = new Date().toISOString().slice(0,10);
+  if (l.date !== today) return;   // 어제 것은 되살리지 않음
+  S.people = l.people; S.grid = l.grid || {}; S.rawRows = l.rawRows || []; S.flags = l.flags || {};
+  document.getElementById('ckEmpty').hidden = true;
+  document.getElementById('ckBody').hidden = false;
+  drawGrid(); drawRaw();
+  msg('ckMsg','ok','오늘 작업하던 표를 그대로 불러왔습니다.');
+}
+
+/* ---------------- 유틸 ---------------- */
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function cssEsc(s){ return String(s).replace(/["\\]/g, '\\$&'); }
+
+/* ---------------- 시작 ---------------- */
+(function init(){
+  const d = new Date();
+  const iso = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  document.getElementById('dateIn').value = iso;
+  document.getElementById('hdrDate').textContent = (d.getMonth()+1) + '월 ' + d.getDate() + '일';
+  document.getElementById('keyIn').value = S.apiKey;
+  document.getElementById('modelIn').value = S.model;
+  document.getElementById('dateIn').addEventListener('change', () => { preview(); saveLast(); });
+  document.getElementById('addName').addEventListener('keydown', e => { if (e.key === 'Enter') addPerson(); });
+  document.getElementById('itemIn').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+  document.getElementById('aliasV').addEventListener('keydown', e => { if (e.key === 'Enter') addAlias(); });
+  drawItems();
+  restore();
+})();
+</script>
+</body>
+</html>
