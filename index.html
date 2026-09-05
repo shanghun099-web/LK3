@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2A2E6E">
-<title>물량정리</title>
+<title>LK 배송물량표</title>
 <style>
 :root{
   --ink:#14161F;
@@ -204,7 +204,7 @@ details.raw summary{font-size:12.5px;color:var(--act);cursor:pointer;font-weight
 
 <header>
   <div class="brand">
-    <h1>물량정리</h1><span class="d" id="hdrDate"></span>
+    <h1>LK 배송물량표</h1><span class="d" id="hdrDate"></span>
     <span class="sp"></span>
     <button class="gear" onclick="openSet()" aria-label="설정">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -400,6 +400,13 @@ const isBusy = (st,m) => st===503 || st===500 || /high demand|overload/i.test(m|
 const shortName = n => String(n).replace(/^gemini-/,'');
 const DAYS = ['일','월','화','수','목','금','토'];
 const WEEKEND_ITEM = '주말딜리';
+const ITEM_ALIAS = { 'ssg':'오네', '쓱':'오네', '오':'오네', '오네':'오네',
+                     '딜':'딜리', '딜리':'딜리', '딜리래빗':'딜리', '딜리레빗':'딜리' };
+const normItem = it => {
+  const k = String(it||'').toLowerCase().replace(/[\s.·]/g,'');
+  const m = ITEM_ALIAS[k];
+  return (m && S.items.indexOf(m) >= 0) ? m : String(it||'').trim();
+};
 const PLAIN_ITEM   = '딜리';
 function dayInfo(){
   const v = (document.getElementById('dateIn')||{}).value;
@@ -581,6 +588,7 @@ function prompt_(){
     '[물품 분류]',
     '쓸 수 있는 물품: ' + S.items.join(', '),
     '- "오네", "오" → 오네',
+    '- "SSG" (대소문자 상관없음), "쓱"으로 적힌 물량도 모두 오네입니다. 별도 물품이 아닙니다.',
     '- "딜", "딜리", "딜리래빗", "딜리레빗" → 딜리',
     '- "주말 딜리", "주말딜" → 주말딜리 / "새벽 딜리", "새벽딜" → 새벽딜리',
     '- ★ 물품 이름 없이 숫자만 적힌 것은 ' + base + ' 입니다. 지역명 바로 뒤에 붙은 숫자(예: 대치30, 개포 42, 대치135개), "70 + 딜리래빗 15"의 70 이 모두 ' + base + ' 입니다.',
@@ -715,8 +723,8 @@ function build(rows){
   const wk = weekendOn();
   S.rawRows.forEach(r => {
     r.item0 = r.item0 || r.item;
-    if (wk && (r.item0 === PLAIN_ITEM || r.item === PLAIN_ITEM)){ r.item = WEEKEND_ITEM; S.moved++; }
-    else if (!wk && r.item0 === PLAIN_ITEM) r.item = PLAIN_ITEM;
+    r.item = normItem(r.item0);
+    if (wk && (r.item === PLAIN_ITEM || r.item0 === PLAIN_ITEM)){ r.item = WEEKEND_ITEM; S.moved++; }
   });
   const seen = {};
   S.rawRows.forEach(r => {
@@ -860,7 +868,7 @@ function dlCSV(){
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '물량_' + (document.getElementById('dateIn').value || 'today') + '.csv';
+  a.download = 'LK배송물량_' + (document.getElementById('dateIn').value || 'today') + '.csv';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
 }
